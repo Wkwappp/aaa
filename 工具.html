@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>全能在线工具箱 | 修复切换+画点+颜色+水印文字</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background: #1a1a2e;
+            color: #fff;
+            font-family: Arial, "Microsoft YaHei", sans-serif;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: #16213e;
+            padding: 20px 10px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #00d4ff;
+            font-size: 18px;
+        }
+
+        .menu-group {
+            margin-bottom: 20px;
+        }
+
+        .menu-title {
+            padding: 8px 10px;
+            background: #0f3460;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .menu-btn {
+            width: 100%;
+            padding: 12px 10px;
+            margin: 4px 0;
+            border: none;
+            background: transparent;
+            color: #ccc;
+            text-align: left;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 15px;
+        }
+
+        .menu-btn:active,
+        .menu-btn.active {
+            background: #00d4ff33;
+            color: #00d4ff;
+        }
+
+        .main-box {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .panel {
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+            overflow: hidden;
+            border: 2px solid #00d4ff;
+            background: #fff;
+        }
+
+        #psCanvas,
+        #editCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .overlay-image,
+        .text-overlay,
+        .watermark-overlay {
+            position: absolute;
+            max-width: 40%;
+            cursor: grab;
+            border: 1px dashed #00d4ff;
+            user-select: none;
+            z-index: 10;
+        }
+
+        .overlay-image:active,
+        .text-overlay:active,
+        .watermark-overlay:active {
+            cursor: grabbing;
+        }
+
+        .tool-row {
+            display: flex;
+            gap: 8px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .tool-btn {
+            padding: 8px 14px;
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .tool-btn:active {
+            opacity: 0.8;
+        }
+
+        .danger-btn {
+            background: #ff5555;
+            color: #fff;
+        }
+
+        .success-btn {
+            background: #22c55e;
+            color: #fff;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 160px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            resize: vertical;
+            font-size: 14px;
+        }
+
+        .download-fixed {
+            position: fixed;
+            left: 16px;
+            bottom: 16px;
+            z-index: 999;
+        }
+
+        #completeBtn {
+            padding: 14px 26px;
+            background: #22c55e;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 12px #22c55e50;
+            font-size: 16px;
+        }
+
+        #completeBtn:active {
+            background: #16a34a;
+        }
+
+        input[type="file"],
+        select,
+        input[type="number"],
+        input[type="text"],
+        input[type="range"] {
+            padding: 8px;
+            background: #0f172a;
+            color: #fff;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        input[type="range"] {
+            width: 120px;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 8px 0;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width:720px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                padding: 10px;
+            }
+
+            .tool-row {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>全能工具箱</h2>
+
+        <div class="menu-group">
+            <div class="menu-title">图片工具 / PS</div>
+            <button class="menu-btn active" data-target="psPanel">在线PS画布</button>
+            <button class="menu-btn" data-target="imgUploadPanel">PNG图层编辑器</button>
+        </div>
+
+        <div class="menu-group">
+            <div class="menu-title">代码工具</div>
+            <button class="menu-btn" data-target="encodePanel">代码加密</button>
+            <button class="menu-btn" data-target="decodePanel">代码解密</button>
+        </div>
+    </div>
+
+    <div class="main-box">
+        <!-- 简易PS画布 -->
+        <div id="psPanel" class="panel active">
+            <h3 class="text-xl mb-3 text-cyan-400">在线简易PS编辑器</h3>
+
+            <div class="tool-row">
+                <button class="tool-btn" id="psDrawPen">画笔</button>
+                <button class="tool-btn" id="psDrawPoint">画点</button>
+                <button class="tool-btn" id="psEraser">橡皮擦</button>
+                <input type="color" id="psColorPicker" value="#000000">
+                <span>粗细：</span>
+                <input type="number" id="psLineWidth" value="5" min="1" max="100">
+                <button class="tool-btn" id="psUndo">撤销</button>
+                <button class="tool-btn danger-btn" id="psClear">清空</button>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="psCanvas" width="800" height="500"></canvas>
+            </div>
+
+            <p class="mt-2 text-gray-400">手指按住画布滑动即可绘制，点击画布直接生成圆点。</p>
+        </div>
+
+        <!-- PNG图层编辑器 -->
+        <div id="imgUploadPanel" class="panel">
+            <h3 class="text-xl mb-3 text-cyan-400">PNG图层编辑器</h3>
+
+            <div class="tool-row">
+                <label class="tool-btn">
+                    导入底图PNG
+                    <input type="file" id="bgFile" accept="image/png,image/jpg,image/jpeg" hidden>
+                </label>
+
+                <label class="tool-btn">
+                    叠加PNG素材
+                    <input type="file" id="overlayFile" accept="image/png" hidden>
+                </label>
+
+                <button class="tool-btn" id="drawOnPng">画笔</button>
+                <button class="tool-btn" id="drawPointOnPng">画点</button>
+                <button class="tool-btn" id="eraserOnPng">橡皮擦</button>
+                <input type="color" id="editColorPicker" value="#000000">
+                <span>粗细：</span>
+                <input type="number" id="editLineWidth" value="5" min="1" max="100">
+            </div>
+
+            <div class="tool-row mt-2">
+                <button class="tool-btn" id="moveOverlay">移动叠加图</button>
+                <button class="tool-btn danger-btn" id="removeOverlay">删除叠加图</button>
+            </div>
+
+            <div class="slider-row">
+                <span>叠加图大小：</span>
+                <input type="range" id="overlaySize" min="10" max="100" value="40">
+                <span id="overlaySizeValue">40%</span>
+            </div>
+
+            <div class="tool-row mt-3">
+                <button class="tool-btn" id="flipH">水平翻转</button>
+                <button class="tool-btn" id="flipV">垂直翻转</button>
+                <button class="tool-btn" id="rotateLeft">左旋90°</button>
+                <button class="tool-btn" id="rotateRight">右旋90°</button>
+                <button class="tool-btn" id="grayFilter">黑白</button>
+                <button class="tool-btn" id="invertFilter">反色</button>
+                <button class="tool-btn" id="blurFilter">模糊</button>
+                <button class="tool-btn" id="cropBtn">裁剪</button>
+                <button class="tool-btn" id="editUndo">撤销绘画</button>
+                <button class="tool-btn danger-btn" id="editClear">清空画布</button>
+            </div>
+
+            <div class="slider-row">
+                <span>亮度：</span>
+                <input type="range" id="brightness" min="0" max="200" value="100">
+                <span id="brightnessValue">100%</span>
+            </div>
+
+            <div class="slider-row">
+                <span>对比度：</span>
+                <input type="range" id="contrast" min="0" max="200" value="100">
+                <span id="contrastValue">100%</span>
+            </div>
+
+            <!-- 添加文字 -->
+            <div class="mt-4 p-3 border border-cyan-600 rounded">
+                <h4 class="text-lg text-cyan-300 mb-2">添加文字</h4>
+
+                <div class="input-row">
+                    <span>文字：</span>
+                    <input type="text" id="textInput" placeholder="输入文字">
+                </div>
+
+                <div class="input-row">
+                    <span>字体：</span>
+                    <select id="fontSelect">
+                        <option value="Arial">Arial</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Courier New">Courier New</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Microsoft YaHei">微软雅黑</option>
+                        <option value="SimHei">黑体</option>
+                        <option value="KaiTi">楷体</option>
+                    </select>
+                </div>
+
+                <div class="input-row">
+                    <span>颜色：</span>
+                    <input type="color" id="textColor" value="#000000">
+                </div>
+
+                <div class="input-row">
+                    <span>字号：</span>
+                    <input type="number" id="fontSize" value="32" min="12" max="120">
+                </div>
+
+                <div class="tool-row mt-2">
+                    <button class="tool-btn success-btn" id="addTextBtn">添加文字</button>
+                    <button class="tool-btn danger-btn" id="removeTextBtn">删除文字</button>
+                </div>
+            </div>
+
+            <!-- 添加水印 -->
+            <div class="mt-4 p-3 border border-cyan-600 rounded">
+                <h4 class="text-lg text-cyan-300 mb-2">添加水印</h4>
+
+                <div class="input-row">
+                    <span>水印文字：</span>
+                    <input type="text" id="watermarkInput" placeholder="输入水印文字">
+                </div>
+
+                <div class="input-row">
+                    <span>字体：</span>
+                    <select id="watermarkFontSelect">
+                        <option value="Arial">Arial</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Microsoft YaHei">微软雅黑</option>
+                        <option value="SimHei">黑体</option>
+                    </select>
+                </div>
+
+                <div class="input-row">
+                    <span>颜色：</span>
+                    <input type="color" id="watermarkColor" value="#000000">
+                </div>
+
+                <div class="input-row">
+                    <span>字号：</span>
+                    <input type="number" id="watermarkFontSize" value="24" min="12" max="80">
+                </div>
+
+                <div class="input-row">
+                    <span>透明度：</span>
+                    <input type="range" id="watermarkOpacity" min="10" max="100" value="40">
+                    <span id="watermarkOpacityValue">40%</span>
+                </div>
+
+                <div class="tool-row mt-2">
+                    <button class="tool-btn success-btn" id="addWatermarkBtn">添加水印</button>
+                    <button class="tool-btn" id="centerWatermarkBtn">居中水印</button>
+                    <button class="tool-btn danger-btn" id="removeWatermarkBtn">取消水印</button>
+                </div>
+            </div>
+
+            <div class="canvas-container" id="editCanvasContainer">
+                <canvas id="editCanvas" width="800" height="600"></canvas>
+            </div>
+
+            <p class="mt-2 text-gray-400">先导入底图，再画画、加文字、加水印；切换面板自动缓存内容。</p>
+        </div>
+
+        <!-- 加密面板 -->
+        <div id="encodePanel" class="panel">
+            <h3 class="text-xl mb-3 text-cyan-400">代码/文本加密工具</h3>
+
+            <div class="mb-2">
+                <span>加密模式：</span>
+                <select id="encodeType">
+                    <option value="base64">Base64加密</option>
+                    <option value="url">URL编码</option>
+                    <option value="unicode">Unicode转义</option>
+                    <option value="html">HTML实体加密</option>
+                </select>
+            </div>
+
+            <textarea id="encodeInput" placeholder="粘贴代码或文本内容"></textarea>
+
+            <div class="tool-row mt-2">
+                <button class="tool-btn" id="startEncode">执行加密</button>
+                <button class="tool-btn" id="copyEncode">复制结果</button>
+                <button class="tool-btn" id="downloadEncode">下载加密文件</button>
+            </div>
+
+            <textarea id="encodeResult" readonly class="mt-3" placeholder="加密结果"></textarea>
+        </div>
+
+        <!-- 解密面板 -->
+        <div id="decodePanel" class="panel">
+            <h3 class="text-xl mb-3 text-cyan-400">代码/文本解密工具</h3>
+
+            <div class="mb-2">
+                <span>解密模式：</span>
+                <select id="decodeType">
+                    <option value="base64">Base64解密</option>
+                    <option value="url">URL解码</option>
+                    <option value="unicode">Unicode解密</option>
+                    <option value="html">HTML实体解密</option>
+                    <option value="auto">自动尝试解密</option>
+                </select>
+            </div>
+
+            <textarea id="decodeInput" placeholder="粘贴加密后的内容"></textarea>
+
+            <div class="tool-row mt-2">
+                <button class="tool-btn" id="startDecode">执行解密</button>
+                <button class="tool-btn" id="copyDecode">复制结果</button>
+                <button class="tool-btn" id="downloadDecode">下载解密文件</button>
+            </div>
+
+            <textarea id="decodeResult" readonly class="mt-3" placeholder="解密结果"></textarea>
+        </div>
+    </div>
+
+    <div class="download-fixed">
+        <button id="completeBtn">完成并下载图片</button>
+    </div>
+
+<script>
+// 等待DOM完全加载再执行JS，修复切换绑定失效
+document.addEventListener('DOMContentLoaded', function(){
+    // ===================== 全局缓存系统 =====================
+    const panelCache = {
+        ps: {
+            dataUrl: "",
+            history: [],
+            width: 800,
+            height: 500
+        },
+        edit: {
+            dataUrl: "",
+            history: [],
+            bgImage: null,
+            overlay: {
+                src: "",
+                left: "50%",
+                top: "50%",
+                scale: "40%"
+            },
+            text: {
+                content: "",
+                font: "Arial",
+                color: "#000000",
+                size: 32,
+                left: "50%",
+                top: "30%"
+            },
+            watermark: {
+                content: "",
+                font: "Arial",
+                color: "#000000",
+                size: 24,
+                opacity: 0.4,
+                left: "50%",
+                top: "50%"
+            },
+            filters: {
+                brightness: 100,
+                contrast: 100,
+                blur: 0,
+                grayscale: false,
+                invert: false
+            },
+            width: 800,
+            height: 600
+        }
+    };
+
+    const menuBtns = document.querySelectorAll('.menu-btn');
+    const panels = document.querySelectorAll('.panel');
+    let currentActivePanel = "psPanel";
+
+    function saveCurrentPanelState() {
+        try{
+            if (currentActivePanel === "psPanel") {
+                const canvas = document.getElementById("psCanvas");
+                panelCache.ps.dataUrl = canvas.toDataURL("image/png");
+                panelCache.ps.history = [...psEditor.history];
+            }
+
+            if (currentActivePanel === "imgUploadPanel") {
+                const canvas = document.getElementById("editCanvas");
+                panelCache.edit.dataUrl = canvas.toDataURL("image/png");
+                panelCache.edit.history = [...editEditor.history];
+                panelCache.edit.bgImage = bgImage;
+                panelCache.edit.filters = {...currentFilters};
+
+                if (overlayEl) {
+                    panelCache.edit.overlay.src = overlayEl.src;
+                    panelCache.edit.overlay.left = overlayEl.style.left;
+                    panelCache.edit.overlay.top = overlayEl.style.top;
+                    panelCache.edit.overlay.scale = document.getElementById("overlaySize").value;
+                }
+
+                if (textOverlayEl) {
+                    panelCache.edit.text.content = document.getElementById("textInput").value;
+                    panelCache.edit.text.font = document.getElementById("fontSelect").value;
+                    panelCache.edit.text.color = document.getElementById("textColor").value;
+                    panelCache.edit.text.size = Number(document.getElementById("fontSize").value);
+                    panelCache.edit.text.left = textOverlayEl.style.left;
+                    panelCache.edit.text.top = textOverlayEl.style.top;
+                }
+
+                if (watermarkOverlayEl) {
+                    panelCache.edit.watermark.content = document.getElementById("watermarkInput").value;
+                    panelCache.edit.watermark.font = document.getElementById("watermarkFontSelect").value;
+                    panelCache.edit.watermark.color = document.getElementById("watermarkColor").value;
+                    panelCache.edit.watermark.size = Number(document.getElementById("watermarkFontSize").value);
+                    panelCache.edit.watermark.opacity = Number(document.getElementById("watermarkOpacity").value) / 100;
+                    panelCache.edit.watermark.left = watermarkOverlayEl.style.left;
+                    panelCache.edit.watermark.top = watermarkOverlayEl.style.top;
+                }
+            }
+        }catch(e){
+            console.warn("保存面板状态异常",e);
+        }
+    }
+
+    function restorePanelState(panelId) {
+        try{
+            if (panelId === "psPanel") {
+                const canvas = document.getElementById("psCanvas");
+                const ctx = canvas.getContext("2d");
+
+                if (panelCache.ps.dataUrl) {
+                    const img = new Image();
+                    img.onload = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                    };
+                    img.src = panelCache.ps.dataUrl;
+                }
+
+                psEditor.history = [...panelCache.ps.history];
+            }
+
+            if (panelId === "imgUploadPanel") {
+                const canvas = document.getElementById("editCanvas");
+                const ctx = canvas.getContext("2d");
+
+                currentFilters = {...panelCache.edit.filters};
+                document.getElementById("brightness").value = currentFilters.brightness;
+                document.getElementById("brightnessValue").textContent = currentFilters.brightness + "%";
+                document.getElementById("contrast").value = currentFilters.contrast;
+                document.getElementById("contrastValue").textContent = currentFilters.contrast + "%";
+
+                bgImage = panelCache.edit.bgImage;
+
+                if (panelCache.edit.dataUrl) {
+                    const img = new Image();
+                    img.onload = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                    };
+                    img.src = panelCache.edit.dataUrl;
+                }
+
+                editEditor.history = [...panelCache.edit.history];
+
+                if (panelCache.edit.overlay.src) {
+                    document.getElementById("overlaySize").value = panelCache.edit.overlay.scale;
+                    document.getElementById("overlaySizeValue").textContent = panelCache.edit.overlay.scale + "%";
+                    createOverlayImage(panelCache.edit.overlay.src);
+                    overlayEl.style.left = panelCache.edit.overlay.left;
+                    overlayEl.style.top = panelCache.edit.overlay.top;
+                    overlayEl.style.width = panelCache.edit.overlay.scale + "%";
+                }
+
+                if (panelCache.edit.text.content) {
+                    document.getElementById("textInput").value = panelCache.edit.text.content;
+                    document.getElementById("fontSelect").value = panelCache.edit.text.font;
+                    document.getElementById("textColor").value = panelCache.edit.text.color;
+                    document.getElementById("fontSize").value = panelCache.edit.text.size;
+                    addTextOverlay(panelCache.edit.text.content, panelCache.edit.text.font, panelCache.edit.text.color, panelCache.edit.text.size);
+                    textOverlayEl.style.left = panelCache.edit.text.left;
+                    textOverlayEl.style.top = panelCache.edit.text.top;
+                }
+
+                if (panelCache.edit.watermark.content) {
+                    document.getElementById("watermarkInput").value = panelCache.edit.watermark.content;
+                    document.getElementById("watermarkFontSelect").value = panelCache.edit.watermark.font;
+                    document.getElementById("watermarkColor").value = panelCache.edit.watermark.color;
+                    document.getElementById("watermarkFontSize").value = panelCache.edit.watermark.size;
+                    document.getElementById("watermarkOpacity").value = Math.round(panelCache.edit.watermark.opacity * 100);
+                    document.getElementById("watermarkOpacityValue").textContent = Math.round(panelCache.edit.watermark.opacity * 100) + "%";
+                    addWatermarkOverlay(panelCache.edit.watermark.content, panelCache.edit.watermark.font, panelCache.edit.watermark.color, panelCache.edit.watermark.size, panelCache.edit.watermark.opacity);
+                    watermarkOverlayEl.style.left = panelCache.edit.watermark.left;
+                    watermarkOverlayEl.style.top = panelCache.edit.watermark.top;
+                }
+            }
+        }catch(e){
+            console.warn("恢复面板状态异常",e);
+        }
+    }
+
+    // 修复切换点击事件，增加异常捕获
+    menuBtns.forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            try{
+                saveCurrentPanelState();
+                const targetId = btn.dataset.target;
+                panels.forEach(p => p.classList.remove('active'));
+                document.getElementById(targetId).classList.add('active');
+                menuBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentActivePanel = targetId;
+                restorePanelState(targetId);
+            }catch(err){
+                console.error("面板切换失败：",err);
+            }
+        };
+    });
+
+    // ===================== 工具函数 =====================
+    function getCanvasPos(canvas, e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
+        if (e.type.startsWith('touch')) {
+            const touch = e.touches[0];
+            return {
+                x: (touch.clientX - rect.left) * scaleX,
+                y: (touch.clientY - rect.top) * scaleY
+            };
+        }
+
+        return {
+            x: e.offsetX * scaleX,
+            y: e.offsetY * scaleY
+        };
+    }
+
+    // 标准画圆点函数，修复无法画点bug
+    function drawCircle(ctx, x, y, radius, color) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+    }
+
+    function makeDraggable(el) {
+        let isDragging = false;
+        let startX, startY, startLeft, startTop;
+
+        el.onmousedown = e => {
+            e.preventDefault();
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = el.offsetLeft;
+            startTop = el.offsetTop;
+        };
+
+        window.onmousemove = e => {
+            if (!isDragging) return;
+            el.style.left = startLeft + (e.clientX - startX) + "px";
+            el.style.top = startTop + (e.clientY - startY) + "px";
+        };
+
+        window.onmouseup = () => {
+            isDragging = false;
+        };
+
+        el.ontouchstart = e => {
+            e.preventDefault();
+            isDragging = true;
+            const touch = e.touches[0];
+            startX = touch.clientX;
+            startY = touch.clientY;
+            startLeft = el.offsetLeft;
+            startTop = el.offsetTop;
+        };
+
+        window.ontouchmove = e => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            el.style.left = startLeft + (touch.clientX - startX) + "px";
+            el.style.top = startTop + (touch.clientY - startY) + "px";
+        };
+
+        window.ontouchend = () => {
+            isDragging = false;
+        };
+    }
+
+    // ===================== 画布绘制器（修复颜色、画点核心逻辑） =====================
+    function setupCanvasDrawing(canvas, options = {}) {
+        const ctx = canvas.getContext('2d');
+
+        let isDraw = false;
+        let toolMode = 'pen';
+        let strokeColor = '#000000';
+        let lineSize = 5;
+        let history = [];
+        let maxHistory = options.maxHistory || 20;
+
+        function saveHistory() {
+            history.push(canvas.toDataURL());
+            if (history.length > maxHistory) history.shift();
+        }
+
+        function undo() {
+            if (history.length === 0) return;
+            const last = history.pop();
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+            };
+            img.src = last;
+        }
+
+        function drawStart(e) {
+            e.preventDefault();
+            saveHistory();
+
+            const pos = getCanvasPos(canvas, e);
+
+            // 画点模式：点击直接绘制圆点
+            if (toolMode === 'point') {
+                drawCircle(ctx, pos.x, pos.y, lineSize, strokeColor);
+                isDraw = false;
+                return;
+            }
+
+            isDraw = true;
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        function drawMove(e) {
+            if (!isDraw) return;
+            e.preventDefault();
+
+            const pos = getCanvasPos(canvas, e);
+
+            ctx.lineWidth = lineSize;
+            ctx.lineCap = 'round';
+
+            if (toolMode === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.lineWidth = lineSize * 3;
+            } else {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.strokeStyle = strokeColor;
+            }
+
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+        }
+
+        function drawEnd() {
+            isDraw = false;
+        }
+
+        canvas.addEventListener('mousedown', drawStart);
+        canvas.addEventListener('mousemove', drawMove);
+        canvas.addEventListener('mouseup', drawEnd);
+        canvas.addEventListener('mouseout', drawEnd);
+
+        canvas.addEventListener('touchstart', drawStart, { passive: false });
+        canvas.addEventListener('touchmove', drawMove, { passive: false });
+        canvas.addEventListener('touchend', drawEnd);
+        canvas.addEventListener('touchcancel', drawEnd);
+
+        return {
+            ctx,
+            history,
+            setToolMode: m => toolMode = m,
+            setColor: c => strokeColor = c,
+            setLineSize: s => lineSize = s,
+            undo,
+            clear: () => {
+                saveHistory();
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            },
+            saveHistory
+        };
+    }
+
+    // ===================== PS画布初始化 =====================
+    const psCanvas = document.getElementById("psCanvas");
+    const psEditor = setupCanvasDrawing(psCanvas);
+
+    document.getElementById("psDrawPen").onclick = () => psEditor.setToolMode("pen");
+    document.getElementById("psDrawPoint").onclick = () => psEditor.setToolMode("point");
+    document.getElementById("psEraser").onclick = () => psEditor.setToolMode("eraser");
+    document.getElementById("psColorPicker").oninput = e => psEditor.setColor(e.target.value);
+    document.getElementById("psLineWidth").oninput = e => psEditor.setLineSize(Number(e.target.value));
+    document.getElementById("psUndo").onclick = () => psEditor.undo();
+    document.getElementById("psClear").onclick = () => psEditor.clear();
+
+    // ===================== PNG图层编辑器初始化 =====================
+    const editCanvas = document.getElementById("editCanvas");
+    const editCanvasContainer = document.getElementById("editCanvasContainer");
+    const editCtx = editCanvas.getContext("2d");
+
+    let bgImage = null;
+    let overlayEl = null;
+    let textOverlayEl = null;
+    let watermarkOverlayEl = null;
+
+    let currentFilters = {
+        brightness: 100,
+        contrast: 100,
+        blur: 0,
+        grayscale: false,
+        invert: false
+    };
+
+    const editEditor = setupCanvasDrawing(editCanvas);
+
+    function redrawCanvas() {
+        if (!bgImage) return;
+
+        editCtx.clearRect(0, 0, editCanvas.width, editCanvas.height);
+
+        editCtx.filter = `
+            brightness(${currentFilters.brightness}%)
+            contrast(${currentFilters.contrast}%)
+            blur(${currentFilters.blur}px)
+            ${currentFilters.grayscale ? "grayscale(100%)" : ""}
+            ${currentFilters.invert ? "invert(100%)" : ""}
+        `;
+
+        editCtx.drawImage(bgImage, 0, 0, editCanvas.width, editCanvas.height);
+        editCtx.filter = "none";
+    }
+
+    function createOverlayImage(imgSrc) {
+        if (overlayEl) overlayEl.remove();
+
+        overlayEl = document.createElement("img");
+        overlayEl.className = "overlay-image";
+        overlayEl.src = imgSrc;
+        overlayEl.style.left = "50%";
+        overlayEl.style.top = "50%";
+        overlayEl.style.transform = "translate(-50%, -50%)";
+
+        editCanvasContainer.appendChild(overlayEl);
+        makeDraggable(overlayEl);
+    }
+
+    function addTextOverlay(text, font, color, size) {
+        if (textOverlayEl) textOverlayEl.remove();
+
+        textOverlayEl = document.createElement("div");
+        textOverlayEl.className = "text-overlay";
+        textOverlayEl.textContent = text;
+        textOverlayEl.style.fontFamily = font;
+        textOverlayEl.style.color = color;
+        textOverlayEl.style.fontSize = size + "px";
+        textOverlayEl.style.left = "50%";
+        textOverlayEl.style.top = "30%";
+        textOverlayEl.style.transform = "translate(-50%, -50%)";
+        textOverlayEl.style.whiteSpace = "nowrap";
+
+        editCanvasContainer.appendChild(textOverlayEl);
+        makeDraggable(textOverlayEl);
+    }
+
+    function addWatermarkOverlay(text, font, color, size, opacity) {
+        if (watermarkOverlayEl) watermarkOverlayEl.remove();
+
+        watermarkOverlayEl = document.createElement("div");
+        watermarkOverlayEl.className = "watermark-overlay";
+        watermarkOverlayEl.textContent = text;
+        watermarkOverlayEl.style.fontFamily = font;
+        watermarkOverlayEl.style.color = color;
+        watermarkOverlayEl.style.fontSize = size + "px";
+        watermarkOverlayEl.style.opacity = opacity;
+        watermarkOverlayEl.style.left = "50%";
+        watermarkOverlayEl.style.top = "50%";
+        watermarkOverlayEl.style.transform = "translate(-50%, -50%)";
+        watermarkOverlayEl.style.whiteSpace = "nowrap";
+
+        editCanvasContainer.appendChild(watermarkOverlayEl);
+        makeDraggable(watermarkOverlayEl);
+    }
+
+    // 底图加载
+    document.getElementById("bgFile").onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = ev => {
+            bgImage = new Image();
+            bgImage.src = ev.target.result;
+            bgImage.onload = () => {
+                redrawCanvas();
+                editEditor.saveHistory();
+            };
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // 叠加PNG素材
+    document.getElementById("overlayFile").onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = ev => createOverlayImage(ev.target.result);
+        reader.readAsDataURL(file);
+    };
+
+    document.getElementById("overlaySize").oninput = e => {
+        const value = e.target.value;
+        document.getElementById("overlaySizeValue").textContent = value + "%";
+        if (overlayEl) overlayEl.style.width = value + "%";
+    };
+
+    // PNG编辑器绘图工具绑定
+    document.getElementById("drawOnPng").onclick = () => editEditor.setToolMode("pen");
+    document.getElementById("drawPointOnPng").onclick = () => editEditor.setToolMode("point");
+    document.getElementById("eraserOnPng").onclick = () => editEditor.setToolMode("eraser");
+    document.getElementById("editColorPicker").oninput = e => editEditor.setColor(e.target.value);
+    document.getElementById("editLineWidth").oninput = e => editEditor.setLineSize(Number(e.target.value));
+
+    document.getElementById("removeOverlay").onclick = () => {
+        if (overlayEl) overlayEl.remove();
+        overlayEl = null;
+        panelCache.edit.overlay = { src: "", left: "50%", top: "50%", scale: "40%" };
+    };
+
+    // 添加文字
+    document.getElementById("addTextBtn").onclick = () => {
+        const text = document.getElementById("textInput").value.trim();
+        if (!text) {
+            alert("请输入文字");
+            return;
+        }
+
+        const font = document.getElementById("fontSelect").value;
+        const color = document.getElementById("textColor").value;
+        const size = Number(document.getElementById("fontSize").value);
+
+        addTextOverlay(text, font, color, size);
+    };
+
+    document.getElementById("removeTextBtn").onclick = () => {
+        if (textOverlayEl) textOverlayEl.remove();
+        textOverlayEl = null;
+        panelCache.edit.text = {
+            content: "",
+            font: "Arial",
+            color: "#000000",
+            size: 32,
+            left: "50%",
+            top: "30%"
+        };
+    };
+
+    // 水印功能
+    document.getElementById("addWatermarkBtn").onclick = () => {
+        const text = document.getElementById("watermarkInput").value.trim();
+        if (!text) {
+            alert("请输入水印文字");
+            return;
+        }
+
+        const font = document.getElementById("watermarkFontSelect").value;
+        const color = document.getElementById("watermarkColor").value;
+        const size = Number(document.getElementById("watermarkFontSize").value);
+        const opacity = Number(document.getElementById("watermarkOpacity").value) / 100;
+
+        addWatermarkOverlay(text, font, color, size, opacity);
+    };
+
+    document.getElementById("centerWatermarkBtn").onclick = () => {
+        if (!watermarkOverlayEl) {
+            alert("请先添加水印");
+            return;
+        }
+
+        watermarkOverlayEl.style.left = "50%";
+        watermarkOverlayEl.style.top = "50%";
+        watermarkOverlayEl.style.transform = "translate(-50%, -50%)";
+    };
+
+    document.getElementById("removeWatermarkBtn").onclick = () => {
+        if (watermarkOverlayEl) watermarkOverlayEl.remove();
+        watermarkOverlayEl = null;
+        panelCache.edit.watermark = {
+            content: "",
+            font: "Arial",
+            color: "#000000",
+            size: 24,
+            opacity: 0.4,
+            left: "50%",
+            top: "50%"
+        };
+    };
+
+    // 图片滤镜与变换
+    document.getElementById("flipH").onclick = () => {
+        if (!bgImage) return;
+        editEditor.saveHistory();
+        editCtx.save();
+        editCtx.scale(-1, 1);
+        editCtx.drawImage(bgImage, -editCanvas.width, 0, editCanvas.width, editCanvas.height);
+        editCtx.restore();
+    };
+
+    document.getElementById("flipV").onclick = () => {
+        if (!bgImage) return;
+        editEditor.saveHistory();
+        editCtx.save();
+        editCtx.scale(1, -1);
+        editCtx.drawImage(bgImage, 0, -editCanvas.height, editCanvas.width, editCanvas.height);
+        editCtx.restore();
+    };
+
+    document.getElementById("rotateLeft").onclick = () => {
+        if (!bgImage) return;
+        editEditor.saveHistory();
+
+        const temp = document.createElement("canvas");
+        temp.width = editCanvas.height;
+        temp.height = editCanvas.width;
+        const tempCtx = temp.getContext("2d");
+
+        tempCtx.translate(temp.width / 2, temp.height / 2);
+        tempCtx.rotate(-Math.PI / 2);
+        tempCtx.drawImage(editCanvas, -editCanvas.width / 2, -editCanvas.height / 2);
+
+        bgImage = new Image();
+        bgImage.onload = () => {
+            editCanvas.width = temp.width;
+            editCanvas.height = temp.height;
+            redrawCanvas();
+        };
+        bgImage.src = temp.toDataURL();
+    };
+
+    document.getElementById("rotateRight").onclick = () => {
+        if (!bgImage) return;
+        editEditor.saveHistory();
+
+        const temp = document.createElement("canvas");
+        temp.width = editCanvas.height;
+        temp.height = editCanvas.width;
+        const tempCtx = temp.getContext("2d");
+
+        tempCtx.translate(temp.width / 2, temp.height / 2);
+        tempCtx.rotate(Math.PI / 2);
+        tempCtx.drawImage(editCanvas, -editCanvas.width / 2, -editCanvas.height / 2);
+
+        bgImage = new Image();
+        bgImage.onload = () => {
+            editCanvas.width = temp.width;
+            editCanvas.height = temp.height;
+            redrawCanvas();
+        };
+        bgImage.src = temp.toDataURL();
+    };
+
+    document.getElementById("grayFilter").onclick = () => {
+        currentFilters.grayscale = !currentFilters.grayscale;
+        redrawCanvas();
+    };
+
+    document.getElementById("invertFilter").onclick = () => {
+        currentFilters.invert = !currentFilters.invert;
+        redrawCanvas();
+    };
+
+    document.getElementById("blurFilter").onclick = () => {
+        currentFilters.blur = currentFilters.blur === 0 ? 3 : 0;
+        redrawCanvas();
+    };
+
+    document.getElementById("brightness").oninput = e => {
+        currentFilters.brightness = Number(e.target.value);
+        document.getElementById("brightnessValue").textContent = e.target.value + "%";
+        redrawCanvas();
+    };
+
+    document.getElementById("contrast").oninput = e => {
+        currentFilters.contrast = Number(e.target.value);
+        document.getElementById("contrastValue").textContent = e.target.value + "%";
+        redrawCanvas();
+    };
+
+    document.getElementById("cropBtn").onclick = () => {
+        if (!bgImage) return;
+        editEditor.saveHistory();
+
+        const w = editCanvas.width;
+        const h = editCanvas.height;
+        const cropW = Math.round(w * 0.8);
+        const cropH = Math.round(h * 0.8);
+        const cropX = Math.round(w * 0.1);
+        const cropY = Math.round(h * 0.1);
+
+        const temp = document.createElement("canvas");
+        temp.width = cropW;
+        temp.height = cropH;
+        const tempCtx = temp.getContext("2d");
+
+        tempCtx.drawImage(editCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+        bgImage = new Image();
+        bgImage.onload = () => {
+            editCanvas.width = cropW;
+            editCanvas.height = cropH;
+            redrawCanvas();
+        };
+        bgImage.src = temp.toDataURL();
+    };
+
+    document.getElementById("editUndo").onclick = () => editEditor.undo();
+
+    document.getElementById("editClear").onclick = () => {
+        editCtx.clearRect(0, 0, editCanvas.width, editCanvas.height);
+
+        if (overlayEl) overlayEl.remove();
+        if (textOverlayEl) textOverlayEl.remove();
+        if (watermarkOverlayEl) watermarkOverlayEl.remove();
+
+        overlayEl = null;
+        textOverlayEl = null;
+        watermarkOverlayEl = null;
+        bgImage = null;
+
+        currentFilters = {
+            brightness: 100,
+            contrast: 100,
+            blur: 0,
+            grayscale: false,
+            invert: false
+        };
+
+        document.getElementById("brightness").value = 100;
+        document.getElementById("brightnessValue").textContent = "100%";
+        document.getElementById("contrast").value = 100;
+        document.getElementById("contrastValue").textContent = "100%";
+
+        panelCache.edit = {
+            dataUrl: "",
+            history: [],
+            bgImage: null,
+            overlay: { src: "", left: "50%", top: "50%", scale: "40%" },
+            text: { content: "", font: "Arial", color: "#000000", size: 32, left: "50%", top: "30%" },
+            watermark: { content: "", font: "Arial", color: "#000000", size: 24, opacity: 0.4, left: "50%", top: "50%" },
+            filters: {...currentFilters},
+            width: 800,
+            height: 600
+        };
+    };
+
+    // 合成下载
+    document.getElementById("completeBtn").onclick = () => {
+        saveCurrentPanelState();
+
+        const currentPanel = Array.from(panels).find(p => p.classList.contains("active"));
+
+        if (currentPanel.id === "psPanel") {
+            const url = psCanvas.toDataURL("image/png");
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "ps绘图结果.png";
+            a.click();
+            return;
+        }
+
+        if (currentPanel.id === "imgUploadPanel") {
+            const tempCanvas = document.createElement("canvas");
+            tempCanvas.width = editCanvas.width;
+            tempCanvas.height = editCanvas.height;
+            const tempCtx = tempCanvas.getContext("2d");
+
+            tempCtx.drawImage(editCanvas, 0, 0);
+
+            if (overlayEl) {
+                const rect = overlayEl.getBoundingClientRect();
+                const canvasRect = editCanvas.getBoundingClientRect();
+
+                const overlayX = (rect.left - canvasRect.left) * (editCanvas.width / canvasRect.width);
+                const overlayY = (rect.top - canvasRect.top) * (editCanvas.height / canvasRect.height);
+                const overlayW = rect.width * (editCanvas.width / canvasRect.width);
+                const overlayH = rect.height * (editCanvas.height / canvasRect.height);
+
+                tempCtx.drawImage(overlayEl, overlayX, overlayY, overlayW, overlayH);
+            }
+
+            if (textOverlayEl) {
+                const rect = textOverlayEl.getBoundingClientRect();
+                const canvasRect = editCanvas.getBoundingClientRect();
+
+                const textX = (rect.left - canvasRect.left) * (editCanvas.width / canvasRect.width);
+                const textY = (rect.top - canvasRect.top) * (editCanvas.height / canvasRect.height);
+
+                tempCtx.font = `${document.getElementById("fontSize").value}px ${document.getElementById("fontSelect").value}`;
+                tempCtx.fillStyle = document.getElementById("textColor").value;
+                tempCtx.fillText(document.getElementById("textInput").value, textX, textY + rect.height * 0.8);
+            }
+
+            if (watermarkOverlayEl) {
+                const rect = watermarkOverlayEl.getBoundingClientRect();
+                const canvasRect = editCanvas.getBoundingClientRect();
+
+                const wmX = (rect.left - canvasRect.left) * (editCanvas.width / canvasRect.width);
+                const wmY = (rect.top - canvasRect.top) * (editCanvas.height / canvasRect.height);
+
+                tempCtx.font = `${document.getElementById("watermarkFontSize").value}px ${document.getElementById("watermarkFontSelect").value}`;
+                tempCtx.fillStyle = document.getElementById("watermarkColor").value;
+                tempCtx.globalAlpha = Number(document.getElementById("watermarkOpacity").value) / 100;
+                tempCtx.fillText(document.getElementById("watermarkInput").value, wmX, wmY + rect.height * 0.8);
+                tempCtx.globalAlpha = 1;
+            }
+
+            const url = tempCanvas.toDataURL("image/png");
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "合成图片.png";
+            a.click();
+            return;
+        }
+
+        alert("当前页面没有图片可下载。");
+    };
+
+    // ========== 加解密工具函数 ==========
+    function b64Encode(str) {
+        return btoa(unescape(encodeURIComponent(str)));
+    }
+
+    function b64Decode(str) {
+        try {
+            return decodeURIComponent(escape(atob(str)));
+        } catch {
+            return "Base64解密失败，格式错误";
+        }
+    }
+
+    function uniEncode(str) {
+        return str.split("").map(c => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`).join("");
+    }
+
+    function uniDecode(str) {
+        return str.replace(/\\u([0-9a-fA-F]{4})/g, (m, p1) => String.fromCharCode(parseInt(p1, 16)));
+    }
+
+    function htmlEncode(str) {
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function htmlDecode(str) {
+        return str.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
+    }
+
+    document.getElementById("startEncode").onclick = () => {
+        const type = document.getElementById("encodeType").value;
+        const input = document.getElementById("encodeInput").value;
+        let res = "";
+
+        switch (type) {
+            case "base64": res = b64Encode(input); break;
+            case "url": res = encodeURIComponent(input); break;
+            case "unicode": res = uniEncode(input); break;
+            case "html": res = htmlEncode(input); break;
+        }
+
+        document.getElementById("encodeResult").value = res;
+    };
+
+    document.getElementById("copyEncode").onclick = () => {
+        const val = document.getElementById("encodeResult").value;
+        navigator.clipboard.writeText(val);
+        alert("已复制");
+    };
+
+    document.getElementById("downloadEncode").onclick = () => {
+        const content = document.getElementById("encodeResult").value;
+        const blob = new Blob([content], {type:"text/plain"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "加密结果.txt";
+        a.click();
+    };
+
+    document.getElementById("startDecode").onclick = () => {
+        const type = document.getElementById("decodeType").value;
+        const input = document.getElementById("decodeInput").value.trim();
+        let res = "";
+
+        try {
+            switch (type) {
+                case "base64": res = b64Decode(input); break;
+                case "url": res = decodeURIComponent(input); break;
+                case "unicode": res = uniDecode(input); break;
+                case "html": res = htmlDecode(input); break;
+                case "auto":
+                    res = b64Decode(input);
+                    if (res.includes("失败")) res = decodeURIComponent(input);
+                    break;
+            }
+        }catch(e){
+            res = "解密出错："+e.message;
+        }
+        document.getElementById("decodeResult").value = res;
+    };
+
+    document.getElementById("copyDecode").onclick = () => {
+        const val = document.getElementById("decodeResult").value;
+        navigator.clipboard.writeText(val);
+        alert("已复制");
+    };
+
+    document.getElementById("downloadDecode").onclick = () => {
+        const content = document.getElementById("decodeResult").value;
+        const blob = new Blob([content], {type:"text/plain"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "解密结果.txt";
+        a.click();
+    };
+
+});
+</script>
+</body>
+</html>
